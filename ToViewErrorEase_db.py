@@ -3,27 +3,40 @@ import sqlite3
 conn = sqlite3.connect('errorease.db')
 cursor = conn.cursor()
 
-#Solutions Table
-print("\n========== SOLUTIONS TABLE ==========")
-
+# --- ORIGINAL TABLES ---
+print("\n========== ORIGINAL SOLUTIONS TABLE ==========")
 cursor.execute("SELECT * FROM SOLUTIONS")
 rows = cursor.fetchall()
-
-# Print
 for row in rows:
     print(f"Error Code: {row[1]} | Summary: {row[2]} | Upvotes: {row[4]} | Downvotes: {row[5]}")
     print("-" * 50)
 
-# View ERRORS
-print("\n========== ERRORS TABLE ==========")
-
+print("\n========== ORIGINAL ERRORS TABLE ==========")
 cursor.execute("SELECT * FROM ERRORS")
 errors = cursor.fetchall()
-
 for row in errors:
-    print(f"Error Code: {row[0]}")
-    print(f"Error Name: {row[1]}")
-    print(f"Description: {row[2]}")
+    print(f"Error Code: {row[0]} | Name: {row[1]} | Desc: {row[2]}")
     print("-" * 50)
+
+#  Separate New Tables for AI writing Test
+print("\n========== AI SOLUTIONS TABLE (TEST) ==========")
+cursor.execute("SELECT * FROM AI_SOLUTIONS")
+ai_rows = cursor.fetchall()
+if ai_rows:
+    for row in ai_rows:
+        print(f"Error Code: {row[1]} | Summary: {row[2]} | Upvotes: {row[4]} | Downvotes: {row[5]}")
+        print("-" * 50)
+else:
+    print("No AI solutions yet.")
+
+print("\n========== AI ERRORS TABLE (TEST) ==========")
+cursor.execute("SELECT * FROM AI_ERRORS")
+ai_errors = cursor.fetchall()
+if ai_errors:
+    for row in ai_errors:
+        print(f"Error Code: {row[0]} | Name: {row[1]} | Desc: {row[2]}")
+        print("-" * 50)
+else:
+    print("No AI errors yet.")
 
 conn.close()
