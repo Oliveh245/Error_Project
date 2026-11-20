@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    </head>
+    <body>
+        <h1>ErrorEase</h1>
+        <h5>
+            Please enter your windows version from the dropdown menu below.<br>
+            Then enter the error code you are working with.<br>
+            Select the search button when complete.
+        </h5>
+        <form>
+            <label>Windows Major Version:</label>
+            <select id="windows-version-input" required>
+                <option value="">-</option>
+                <option value="win11">11</option>
+                <option value="win10">10</option>
+                <option value="win7">7</option>
+            </select>
+            <br>
+            <label>Error code:</label>
+            <input type="text" id="error-code-input" required>
+            <br>
+            <input type="submit" id="search-error" value="Submit">
+        </form>
+        
+    </body>
+</html>
