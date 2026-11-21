@@ -2,8 +2,177 @@ import sqlite3
 import ast
 from groq import Groq
 
+#FUNCTION DEFINITIONS
+# Displays the new error and solution in console on join using origianl tables. ACTUAL
+# def display_error_and_solutions(cursor, error_code):        
+#     cursor.execute("""
+#         SELECT ERRORS.ErrorCode,
+#                ERRORS.ErrorDescription,
+#                SOLUTIONS.PlainEnglishSummary,
+#                SOLUTIONS.StepByStepFix
+#         FROM ERRORS
+#         JOIN SOLUTIONS
+#         ON ERRORS.ErrorCode = SOLUTIONS.ErrorCode
+#         WHERE ERRORS.ErrorCode = ?
+#     """, (error_code,))
+
+#     results = cursor.fetchall()
+
+#     for row in results:
+#         print("Error Code:", row[0])
+#         print("Error Description:", row[1])
+#         print("Summary:", row[2])
+#         print("Solution:", row[3])
+
+#Displays the new error and solution in console on join using new tables. TESTING
+def display_error_and_solutions(cursor, error_code):        
+    cursor.execute("""
+        SELECT AI_ERRORS.ErrorCode,
+            AI_ERRORS.ErrorDescription,
+            AI_SOLUTIONS.PlainEnglishSummary,
+            AI_SOLUTIONS.StepByStepFix
+        FROM AI_ERRORS
+        JOIN AI_SOLUTIONS
+        ON AI_ERRORS.ErrorCode = AI_SOLUTIONS.ErrorCode
+        WHERE AI_ERRORS.ErrorCode = ?
+    """, (error_code,))
+
+    results = cursor.fetchall()
+
+    for row in results:
+        print("Error Code:", row[0])
+        print("Error Description:", row[1])
+        print("Summary:", row[2])
+        print("Solution:", row[3])
+
+#Insers the new data from the AI into the original tables. ACTUAL
+# def insert_new_data(cursor, new_data):
+#     try:
+    #     cursor.execute('INSERT OR IGNORE INTO ERRORS (ErrorCode, ErrorName, ErrorDescription) VALUES (?, ?, ?)', (new_data[0], new_data[1], new_data[2]))
+    #     cursor.execute('''
+    #         INSERT INTO SOLUTIONS (ErrorCode, PlainEnglishSummary, StepByStepFix, Upvotes, Downvotes)
+    #         SELECT ?, ?, ?, ?, ?
+    #         WHERE NOT EXISTS (SELECT 1 FROM SOLUTIONS WHERE ErrorCode = ? AND StepByStepFix = ?)
+    #     ''', (new_data[0], new_data[3], new_data[4], new_data[5], new_data[6], new_data[0], new_data[4]))
+
+    #     if cursor.rowcount > 0:
+    #         cursor.connection.commit()
+    #         return True
+    #     else:
+    #         cursor.connection.commit()
+    #         print("No new data inserted; the solution already exists.")
+    #         return False
+        
+    # except Exception as e:
+    #     cursor.connection.rollback()
+    #     print(f"Database error: {e}")
+    #     return False
+
+#Insers the new data from the AI into the AI tables. TESTING
+def insert_new_data(cursor, new_data):
+    try:
+        cursor.execute('INSERT OR IGNORE INTO AI_ERRORS (ErrorCode, ErrorName, ErrorDescription) VALUES (?, ?, ?)', (new_data[0], new_data[1], new_data[2]))
+        cursor.execute('''
+            INSERT INTO AI_SOLUTIONS (ErrorCode, PlainEnglishSummary, StepByStepFix, Upvotes, Downvotes)
+            SELECT ?, ?, ?, ?, ?
+            WHERE NOT EXISTS (SELECT 1 FROM AI_SOLUTIONS WHERE ErrorCode = ? AND StepByStepFix = ?)
+        ''', (new_data[0], new_data[3], new_data[4], new_data[5], new_data[6], new_data[0], new_data[4]))
+
+        if cursor.rowcount > 0:
+            cursor.connection.commit()
+            return True
+        else:
+            cursor.connection.commit()
+            print("No new data inserted; the solution already exists.")
+            return False
+        
+    except Exception as e:
+        cursor.connection.rollback()
+        print(f"Database error: {e}")
+        return False
+
+#creating and using AI model to search error code and generate a solution to go along with it.
+def create_ai_solutions(cursor, error_code):
+    print(f"\n⚠️ Error is new! Asking AI to generate data for '{error_code}'...")
+    print("🤖 AI is thinking...\n")
+
+    #Checks if there are already existing solutions for the error code in the AI_SOLUTIONS table and stores them to not make duplicates
+    cursor.execute("""
+    SELECT PlainEnglishSummary
+    FROM AI_SOLUTIONS
+    WHERE ErrorCode = ?
+    """, (error_code,))
+    existing_summaries = [row[0] for row in cursor.fetchall()]
+
+    #NEW PROMPT
+    prompt = f"""
+    Check if the Windows error code {error_code} is a real, documented Windows error.
+    - If it is FAKE or NOT REAL, reply ONLY with the exact text: Error is invalid!
+    - If it IS real, reply ONLY with a Python tuple in this exact 7-item format:
+        ('{error_code}', 'ErrorName', 'One sentence description', 'One sentence summary of the 1 to 3 step fix', '1 to 3 step fix', 0, 0)
+
+    IMPORTANT: The following solutions already exist for this error code:
+    {existing_summaries if existing_summaries else "No existing solutions."}
+    Your new solution MUST:
+    - Provide a genuinely different troubleshooting approach.
+    - Not repeat the same underlying fix as an existing solution.
+    - Not simply reword an existing solution.
+    - Use a different troubleshooting method, tool, or repair approach where possible.
+    - Avoid repeating the same steps in a different order.
+    If no genuinely different solution can be suggested, reply ONLY with:
+    No new solution available!
+    Do not add extra words, greetings, or markdown code blocks.
+    """
+
+    #OLD PROMPT
+    # prompt = f"""
+    # Check if the Windows error code {error_code} is a real, documented Windows error.
+    # - If it is FAKE or NOT REAL, reply ONLY with the exact text: Error is invalid!
+    # - If it IS real, reply ONLY with a Python tuple in this exact 7-item format. 
+    #     Do not add any extra words, greetings, or markdown code blocks.
+    #     ('{error_code}', 'ErrorName', 'One sentence description', 'One sentence summary of the 1 to 3 step fix', '1 to 3 step fix', 0, 0)
+    # """
+
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "You are a strict data-entry bot. You only output the exact requested format."},
+                {"role": "user", "content": prompt}
+            ],
+            model=MODEL_NAME
+        )
+            
+        ai_response = chat_completion.choices[0].message.content.strip()
+        if ai_response.startswith("```"):
+            ai_response = ai_response.strip("`").replace("python", "").strip()
+        
+        if ai_response == "Error is invalid!":
+            print(f"\n{ai_response}")
+            return False
+        elif ai_response == "No new solution available!":
+            print(f"\n{ai_response}")
+            return False
+        else:
+            new_data = ast.literal_eval(ai_response)
+
+            #Makes sure the AI response is in the correct format before inserting into the database
+            if not isinstance(new_data, tuple) or len(new_data) != 7:
+                print("Invalid AI response format.")
+                return False
+
+            # If it comes back True then it was safely inserted into the table as a new solution
+            isWorking = insert_new_data(cursor, new_data)
+            if not isWorking:
+                return False
+            else:
+                return True
+    except Exception as e:
+        print(f"\nAI Error: {e}")
+        return False
+#END OF FUNCTIONS
+
 # 1. Defining Model and API key
-API_KEY = "GetOnOneDrive"
+API_KEY = "OneDriveKey"
 MODEL_NAME = "openai/gpt-oss-120b" 
 
 client = Groq(api_key=API_KEY)
@@ -13,7 +182,7 @@ cursor = conn.cursor()
 # Enable foreign keys for the new tables
 cursor.execute('PRAGMA foreign_keys = ON')
 
-# Create the NEW AI tables for testing
+# Create the NEW AI tables for testing. DELETE WHEN DONE TESTING
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS AI_ERRORS (
         ErrorCode TEXT PRIMARY KEY,
@@ -56,16 +225,7 @@ results = cursor.fetchall()
 
 # 4. IF FOUND IN ORIGINAL DATABASE
 if results:
-    print(f"\n✅ Error found in your original 'errorease.db'!")
-    print(f"Error Name: {results[0][0]}")
-    print(f"Description: {results[0][1]}\n")
-    print("Available Solutions:")
-    print("-" * 40)
-    for row in results:
-        print(f"Summary: {row[2]}")
-        print(f"Fix: {row[3]}")
-        print(f"Upvotes: {row[4]} | Downvotes: {row[5]}")
-        print("-" * 40)
+    print(f"\nError found in your original 'errorease.db'!")
 
 # 5. IF NOT FOUND IN ORIGINAL DATABASE
 else:
@@ -73,72 +233,97 @@ else:
     if not error_code.lower().startswith('0x'):
         print("\nInvalid inputs, errors only!")
     else:
-        # Check if it's ALREADY in the AI tables
+        #Check if it's ALREADY in the AI tables. DELETE WHEN DONE TESTING
         cursor.execute("SELECT * FROM AI_ERRORS WHERE ErrorCode = ?", (error_code,))
         ai_exists = cursor.fetchone()
-
         if ai_exists:
-            print(f"\n✅ Error found in your 'AI_ERRORS' table!")
-            print(f"Error Name: {ai_exists[1]}")
-            print(f"Description: {ai_exists[2]}\n")
-            
-            cursor.execute("SELECT * FROM AI_SOLUTIONS WHERE ErrorCode = ?", (error_code,))
-            ai_solutions = cursor.fetchall()
-            for row in ai_solutions:
-                print(f"Summary: {row[2]}")
-                print(f"Fix: {row[3]}")
-                print(f"Upvotes: {row[4]} | Downvotes: {row[5]}")
-                print("-" * 40)
+            print(f"\nError found in your 'AI_ERRORS' table!")
         else:
             # It's not in the original DB, and not in the AI DB. Ask the AI!
-            print(f"\n⚠️ Error is new! Asking AI to generate data for '{error_code}'...")
-            print("🤖 AI is thinking...\n")
-            
-            prompt = f"""
-            Check if the Windows error code {error_code} is a real, documented Windows error.
-            - If it is FAKE or NOT REAL, reply ONLY with the exact text: Error is invalid!
-            - If it IS real, reply ONLY with a Python tuple in this exact 7-item format. 
-              Do not add any extra words, greetings, or markdown code blocks.
-              ('{error_code}', 'ErrorName', 'One sentence description', 'Short Summary', '1 to 3 step fix', 0, 0)
-            """
+            solution_count = 0 #count for checking database
+            successful_inserts = 0 #count for insertions
+            target_solutions = 3 #number of solutions to generate
 
-            try:
-                chat_completion = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": "You are a strict data-entry bot. You only output the exact requested format."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    model=MODEL_NAME
-                )
-                
-                ai_response = chat_completion.choices[0].message.content.strip()
-                if ai_response.startswith("```"):
-                    ai_response = ai_response.strip("`").replace("python", "").strip()
-                
-                if ai_response == "Error is invalid!":
-                    print(f"\n{ai_response}")
-                else:
-                    new_data = ast.literal_eval(ai_response)
-                    
-                    # Save to AI tables
-                    cursor.execute('INSERT OR IGNORE INTO AI_ERRORS (ErrorCode, ErrorName, ErrorDescription) VALUES (?, ?, ?)', (new_data[0], new_data[1], new_data[2]))
-                    
-                    # UPDATED: Prevents saving the exact same fix twice!
-                    cursor.execute('''
-                        INSERT INTO AI_SOLUTIONS (ErrorCode, PlainEnglishSummary, StepByStepFix, Upvotes, Downvotes)
-                        SELECT ?, ?, ?, ?, ?
-                        WHERE NOT EXISTS (SELECT 1 FROM AI_SOLUTIONS WHERE ErrorCode = ? AND StepByStepFix = ?)
-                    ''', (new_data[0], new_data[3], new_data[4], new_data[5], new_data[6], new_data[0], new_data[4]))
-                    
-                    conn.commit()
-                    
-                    print("💾 Successfully saved to AI_ERRORS and AI_SOLUTIONS tables!")
-                    print(f"\nSummary: {new_data[3]}")
-                    print(f"Fix: {new_data[4]}")
-                    print(f"Upvotes: {new_data[5]} | Downvotes: {new_data[6]}")
-                    print("-" * 40)
-                    
-            except Exception as e:
-                print(f"\n❌ AI Error: {e}")
+            #Loop to generate multiple solutions for the same error code
+            for i in range(target_solutions):
+                result = create_ai_solutions(cursor, error_code) #True or False depening on successful insert
+                if result:
+                    successful_inserts += 1
 
+            #Counts how many solutions exist for the error code in the AI_SOLUTIONS table
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM AI_SOLUTIONS
+                WHERE ErrorCode = ?
+            """, (error_code,))
+
+            solution_count = cursor.fetchone()[0]
+
+            print(f"{solution_count} solutions exist for {error_code}.")
+
+            #CODE MOVED TO FUNCTIONS: create_ai_solutions and insert_new_data. KEPT AS COMMENT IN CASE NEEDED
+
+            # print(f"\n⚠️ Error is new! Asking AI to generate data for '{error_code}'...")
+            # print("🤖 AI is thinking...\n")
+                
+            # prompt = f"""
+            # Check if the Windows error code {error_code} is a real, documented Windows error.
+            # - If it is FAKE or NOT REAL, reply ONLY with the exact text: Error is invalid!
+            # - If it IS real, reply ONLY with a Python tuple in this exact 7-item format. 
+            #     Do not add any extra words, greetings, or markdown code blocks.
+            #     ('{error_code}', 'ErrorName', 'One sentence description', 'Short Summary', '1 to 3 step fix', 0, 0)
+            # """
+
+            # try:
+            #     chat_completion = client.chat.completions.create(
+            #         messages=[
+            #             {"role": "system", "content": "You are a strict data-entry bot. You only output the exact requested format."},
+            #             {"role": "user", "content": prompt}
+            #         ],
+            #         model=MODEL_NAME
+            #     )
+                    
+            #     ai_response = chat_completion.choices[0].message.content.strip()
+            #     if ai_response.startswith("```"):
+            #         ai_response = ai_response.strip("`").replace("python", "").strip()
+                    
+            #     if ai_response == "Error is invalid!":
+            #         print(f"\n{ai_response}")
+            #     else:
+            #         new_data = ast.literal_eval(ai_response)
+                        
+            #         #Save to AI tables
+            #         cursor.execute('INSERT OR IGNORE INTO AI_ERRORS (ErrorCode, ErrorName, ErrorDescription) VALUES (?, ?, ?)', (new_data[0], new_data[1], new_data[2]))
+            #         #ORIGINAL DATABASE
+            #         # cursor.execute('INSERT OR IGNORE INTO ERRORS (ErrorCode, ErrorName, ErrorDescription) VALUES (?, ?, ?)', (new_data[0], new_data[1], new_data[2]))
+
+            #         #UPDATED: Prevents saving the exact same fix twice!
+            #         cursor.execute('''
+            #             INSERT INTO AI_SOLUTIONS (ErrorCode, PlainEnglishSummary, StepByStepFix, Upvotes, Downvotes)
+            #             SELECT ?, ?, ?, ?, ?
+            #             WHERE NOT EXISTS (SELECT 1 FROM AI_SOLUTIONS WHERE ErrorCode = ? AND StepByStepFix = ?)
+            #         ''', (new_data[0], new_data[3], new_data[4], new_data[5], new_data[6], new_data[0], new_data[4]))
+
+            #         #ORIGINAL DATABASE
+            #         # cursor.execute('''
+            #         #                     INSERT INTO SOLUTIONS (ErrorCode, PlainEnglishSummary, StepByStepFix, Upvotes, Downvotes)
+            #         #                     SELECT ?, ?, ?, ?, ?
+            #         #                     WHERE NOT EXISTS (SELECT 1 FROM SOLUTIONS WHERE ErrorCode = ? AND StepByStepFix = ?)
+            #         #                 ''', (new_data[0], new_data[3], new_data[4], new_data[5], new_data[6], new_data[0], new_data[4]))
+
+
+            #         print("💾 Successfully saved to AI_ERRORS and AI_SOLUTIONS tables!")
+            #         # print("💾 Successfully saved to ERRORS and SOLUTIONS tables!")
+            #         # print(f"\nError Code: {new_data[0]}")
+            #         # print(f"\nSummary: {new_data[3]}")
+            #         # print(f"Fix: {new_data[4]}")
+            #         # print(f"Upvotes: {new_data[5]} | Downvotes: {new_data[6]}")
+            #         # print("-" * 40)
+            # except Exception as e:
+            #     print(f"\n AI Error: {e}")
+
+display_error_and_solutions(cursor, error_code)
+
+
+conn.commit()
 conn.close()
