@@ -1,10 +1,32 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <title>Solutions for {{ error_code }}</title>
     </head>
     <body>
-        <button id="back">Back</button>
-        <div id="summary-placeholder">Summary Placeholder</div>
-        <div id="list-placeholder">List Placeholder</div>
+        <a href="/"><button>Back to Search</button></a>
+        
+        <h1>Solutions for {{ error_code }}</h1>
+
+        {% for solution in solutions %}
+            <div style="border: 1px solid black; padding: 10px; margin: 10px;">
+                <h3>Solution Summary:</h3>
+                <p>{{ solution[2] }}</p>
+                
+                <h3>Step-by-Step Fix:</h3>
+                <p>{{ solution[3] }}</p>
+                
+                <!-- VOTING BUTTONS AND NUMBERS -->
+                <!-- Added ?code={{ error_code }} so the page reloads correctly after voting -->
+                <a href="/upvote/{{ solution[4] }}?code={{ error_code }}"><button>👍 Upvote</button></a>
+                <span> {{ solution[5] }} </span>
+                
+                <a href="/downvote/{{ solution[4] }}?code={{ error_code }}"><button>👎 Downvote</button></a>
+                <span> {{ solution[6] }} </span>
+                
+                <br><br>
+                <a href="/solution/{{ solution[4] }}"><button>View Details</button></a>
+            </div>
+        {% endfor %}
     </body>
 </html>

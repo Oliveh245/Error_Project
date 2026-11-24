@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <title>ErrorEase Search</title>
     </head>
     <body>
         <h1>ErrorEase</h1>
@@ -9,9 +10,11 @@
             Then enter the error code you are working with.<br>
             Select the search button when complete.
         </h5>
-        <form>
+        <!-- Added method="POST" and action="/search" -->
+        <form method="POST" action="/search">
             <label>Windows Major Version:</label>
-            <select id="windows-version-input" required>
+            <!-- Added name="windows_version" -->
+            <select name="windows_version" id="windows-version-input" required>
                 <option value="">-</option>
                 <option value="win11">11</option>
                 <option value="win10">10</option>
@@ -19,7 +22,8 @@
             </select>
             <br>
             <label>Error code:</label>
-            <input type="text" id="error-code-input" required>
+            <!-- Added name="error_code" (Flask needs this!) -->
+            <input type="text" name="error_code" id="error-code-input" required>
             <br>
             <input type="submit" id="search-error" value="Submit">
         </form>
