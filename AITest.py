@@ -120,10 +120,13 @@ def create_ai_solutions(cursor, error_code):
 #END OF FUNCTIONS
 
 # 1. Defining Model and API key
-API_KEY = "OpenOnedriveKEY"
+api_key = "OpenOnedriveKEY"
 MODEL_NAME = "openai/gpt-oss-120b" 
 
-client = Groq(api_key=API_KEY)
+if api_key == "OpenOnedriveKEY":
+    api_key = open(".api-key", "r")
+
+client = Groq(api_key=api_key)
 
 # --- THIS BLOCK ONLY RUNS IF YOU RUN AITest.py DIRECTLY IN TERMINAL ---
 if __name__ == "__main__":
