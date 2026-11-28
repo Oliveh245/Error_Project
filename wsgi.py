@@ -72,7 +72,16 @@ def solution(item_id, methods=["GET"]):
     if not solution:
         return render_template("solution-empty.html")
     else:
-        return render_template("solution-valid.html", name=solution[0], desc=solution[1], sol=solution[2], guide=solution[3])
+        return render_template(
+            "solution-valid.html", 
+            error_code=solution[0], 
+            description=solution[1], 
+            solution=solution[2], 
+            steps=solution[3], 
+            soluton_id=solution[4], 
+            upvotes=solution[5], 
+            downvotes=solution[6]
+        )
 
 @app.route("/upvote/<int:solution_id>")
 def upvote(solution_id):

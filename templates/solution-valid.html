@@ -5,10 +5,18 @@
     <body>
         <button href="javascript:history.back()">Back to Solutions</button>
         <div style="border: 1px solid black; padding: 10px; margin: 10px;">
-            <h1>{{ name }}</h1>
-            <h3>{{ desc }}</h3>
-            <p>{{ sol }}</p>
-            <p>{{ guide }}</p>
+            <h1>{{ error_code }}</h1>
+            <h3>{{ description }}</h3>
+            <p>{{ solution }}</p>
+            <p>{{ steps }}</p>
         </div>
+        <br>
+        <!-- VOTING BUTTONS AND NUMBERS -->
+        <!-- Added ?code={{ error_code }} so the page reloads correctly after voting -->
+        <a href="/upvote/{{ solution_id }}?code={{ error_code }}"><button>👍 Upvote</button></a>
+        <span> {{ upvotes }} </span>
+        
+        <a href="/downvote/{{ solution_id }}?code={{ error_code }}"><button>👎 Downvote</button></a>
+        <span> {{ downvotes }} </span>
     </body>
 </html>
