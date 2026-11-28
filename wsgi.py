@@ -10,6 +10,9 @@ app = Flask(__name__)
 def search():
     return render_template("search.html")
 
+# Used to keep track of solutions to make displaying details a bit easier (without refactoring)
+current_solutions = []
+
 @app.route("/search", methods=["GET", "POST"])
 def handle_search():
     # Read the error code from the form (POST) OR from the URL (?code=...) (GET)
@@ -49,6 +52,8 @@ def handle_search():
     conn.close()
 
     if results:
+        global current_solutions # bad practice but wcyd
+        current_solutions = results
         return render_template("list.html", error_code=error_code, solutions=results)
     else:
         return render_template("no-solution.html")
@@ -61,9 +66,13 @@ def no_solution():
 def solutions():
     return render_template("list.html")
 
-@app.route("/solution")
-def solution():
-    return render_template("solution.html")
+@app.route("/solution/<int:item_id>")
+def solution(item_id, methods=["GET"]):
+    solution = [s for s in current_solutions if s[4] == item_id][0]
+    if not solution:
+        return render_template("solution-empty.html")
+    else:
+        return render_template("solution-valid.html", name=solution[0], desc=solution[1], sol=solution[2], guide=solution[3])
 
 @app.route("/upvote/<int:solution_id>")
 def upvote(solution_id):

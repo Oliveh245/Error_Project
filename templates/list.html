@@ -25,7 +25,9 @@
                 <span> {{ solution[6] }} </span>
                 
                 <br><br>
-                <a href="/solution/{{ solution[4] }}"><button>View Details</button></a>
+                <form metohd="GET" action="/solution/{{ solution[4] }}">
+                    <input type="submit" name="select-solution" value="View Details">
+                </form>
             </div>
         {% endfor %}
     </body>

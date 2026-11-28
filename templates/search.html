@@ -14,7 +14,7 @@
         <form method="POST" action="/search">
             <label>Windows Major Version:</label>
             <!-- Added name="windows_version" -->
-            <select name="windows_version" id="windows-version-input" required>
+            <select name="windows_version" required>
                 <option value="">-</option>
                 <option value="win11">11</option>
                 <option value="win10">10</option>
@@ -23,9 +23,9 @@
             <br>
             <label>Error code:</label>
             <!-- Added name="error_code" (Flask needs this!) -->
-            <input type="text" name="error_code" id="error-code-input" required>
+            <input type="text" name="error_code" required>
             <br>
-            <input type="submit" id="search-error" value="Submit">
+            <input type="submit" value="Search">
         </form>
         
     </body>
